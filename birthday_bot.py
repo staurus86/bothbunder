@@ -25,6 +25,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+from greetings import pick_greeting
+
 # Публичная таблица с днями рождения (CSV-экспорт листа gid=0).
 SHEET_ID = "1ZINwZNhdn5YSxXJORaHuokBm6ITbHAD2PaWwQjm8A08"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
@@ -89,12 +91,14 @@ def birthdays_today(people, today):
     return [p["name"] for p in people if p["day"] == today.day and p["month"] == today.month]
 
 
-def build_message(names):
-    """Текст сообщения для чата."""
+def build_message(names, greeting=""):
+    """Текст сообщения для чата: список именинников + поздравление дня."""
     if not names:
         return "Сегодня ДР нет"
     lines = ["🎉 Сегодня день рождения у:"]
     lines += [f"• {name}" for name in names]
+    if greeting:
+        lines += ["", greeting]
     return "\n".join(lines)
 
 
@@ -130,7 +134,7 @@ def main(argv=None):
     today = resolve_today(args.date)
     people = parse_rows(fetch_csv())
     names = birthdays_today(people, today)
-    text = build_message(names)
+    text = build_message(names, pick_greeting(today))
 
     if args.dry_run:
         print(f"[dry-run] дата: {today.day:02d}.{today.month:02d}, записей в таблице: {len(people)}")

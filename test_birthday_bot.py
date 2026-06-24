@@ -1,9 +1,11 @@
-"""Тесты парсинга дат и выбора именинников."""
+"""Тесты парсинга дат, выбора именинников и поздравлений."""
 
+import re
 import unittest
 from datetime import datetime
 
 import birthday_bot as bb
+from greetings import GREETINGS, pick_greeting
 
 # Фрагмент реальной таблицы (включая имя с кавычками и эмодзи).
 SAMPLE_CSV = (
@@ -68,17 +70,51 @@ class BirthdaysTodayTest(unittest.TestCase):
 
 class BuildMessageTest(unittest.TestCase):
     def test_empty(self):
-        self.assertEqual(bb.build_message([]), "Сегодня ДР нет")
+        self.assertEqual(bb.build_message([], "Счастья!"), "Сегодня ДР нет")
 
-    def test_one(self):
-        msg = bb.build_message(["Юна"])
+    def test_one_with_greeting(self):
+        msg = bb.build_message(["Юна"], "Счастья и здоровья!")
         self.assertIn("Юна", msg)
         self.assertIn("🎉", msg)
+        self.assertIn("Счастья и здоровья!", msg)
 
     def test_many(self):
-        msg = bb.build_message(["Юна", "Аня 🦉"])
+        msg = bb.build_message(["Юна", "Аня 🦉"], "Тепла!")
         self.assertIn("Юна", msg)
         self.assertIn("Аня 🦉", msg)
+        self.assertIn("Тепла!", msg)
+
+
+class GreetingsTest(unittest.TestCase):
+    def test_exactly_100(self):
+        self.assertEqual(len(GREETINGS), 100)
+
+    def test_all_unique(self):
+        self.assertEqual(len(set(GREETINGS)), 100)
+
+    def test_no_blanks(self):
+        self.assertTrue(all(g.strip() for g in GREETINGS))
+
+    def test_gender_neutral(self):
+        # Слова, выдающие род адресата, недопустимы.
+        forbidden = re.compile(
+            r"\b(его|её|ее|был|была|счастлив|счастлива|рад|рада|горд|горда|сам|сама)\b",
+            re.IGNORECASE,
+        )
+        offenders = [g for g in GREETINGS if forbidden.search(g)]
+        self.assertEqual(offenders, [], f"Найдены гендерные маркеры: {offenders}")
+
+
+class PickGreetingTest(unittest.TestCase):
+    def test_deterministic(self):
+        d = datetime(2026, 8, 6)
+        self.assertEqual(pick_greeting(d), pick_greeting(d))
+
+    def test_varies_across_days(self):
+        # За 100 разных дней подряд поздравления не повторяются.
+        picks = [pick_greeting(datetime(2026, 1, 1) + __import__("datetime").timedelta(days=i))
+                 for i in range(100)]
+        self.assertEqual(len(set(picks)), 100)
 
 
 if __name__ == "__main__":
