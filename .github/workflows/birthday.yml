@@ -1,0 +1,24 @@
+name: Birthday bot
+
+on:
+  schedule:
+    # GitHub cron работает по UTC. 00:00 МСК (UTC+3) = 21:00 UTC.
+    # Запуск может опаздывать на 5–30 минут при нагрузке GitHub — это нормально.
+    - cron: "0 21 * * *"
+  workflow_dispatch:  # позволяет запустить вручную из вкладки Actions
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send birthday message
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python birthday_bot.py
